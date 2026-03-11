@@ -1,5 +1,9 @@
 # Accessing & Manipulating an RSE
 
+This chapter covers the practical mechanics of working with an RSE: how to get data in and out of every slot, how to filter rows and columns, and how to combine multiple objects.
+
+The key principle is that **every accessor works as both a getter and a setter**.  Calling `colData(rse)` returns the sample metadata; calling `colData(rse) <- new_df` replaces it (with automatic dimension checking to prevent misalignment).  The same pattern applies to every slot.
+
 ## Creating an RSE from scratch
 
 Although in practice you will load an RSE produced by a pipeline (see @sec-workflow), it is instructive to build one manually.
@@ -63,6 +67,8 @@ If they don't match, the constructor throws an error.
 
 ## Reading slots
 
+Each slot has a dedicated accessor function.  The **plural form** (e.g. `assays()`) returns the full container (a `SimpleList` or `DataFrame`), while the **singular form** (e.g. `assay()`) returns a single layer by name or index.
+
 ### Assays
 
 ```r
@@ -100,6 +106,8 @@ strand(rowRanges(rse))    # strand
 
 ### colData
 
+The `colData` slot is the most-used slot in practice — it holds condition, batch, and all other sample-level variables you will reference in your statistical design.
+
 ```r
 colData(rse)              # full DataFrame
 colData(rse)$condition    # one column
@@ -113,6 +121,12 @@ rse$RIN <- c(9.1, 8.7, 9.3, 8.9, 9.0,
              8.5, 9.2, 8.8, 9.1, 8.6)  # RNA integrity
 ```
 
+::: {.callout-tip}
+## The `$` shorthand
+
+`rse$condition` is shorthand for `colData(rse)$condition`.  It works for reading *and* writing (`rse$RIN <- ...`).  In practice, almost all filtering is written as `rse[, rse$condition == "treated"]` because it is far more readable than the long-form equivalent.
+:::
+
 ### metadata
 
 ```r
@@ -125,7 +139,9 @@ metadata(rse)$QC <- list(minRIN = 8, minDepth = 1e6)
 
 ## Subsetting
 
-Subsetting uses standard `[row, col]` syntax — just like a matrix.
+Subsetting uses standard `[row, col]` syntax — just like a matrix.  The critical difference from plain matrix subsetting is that **all slots are subsetted together**: the assay matrices, `rowRanges`, `rowData`, and `colData` all shrink in lock-step.  You cannot accidentally produce a mismatched object.
+
+You can subset by integer index, character name, or a logical vector — whichever is most convenient:
 
 ```r
 ## By index
