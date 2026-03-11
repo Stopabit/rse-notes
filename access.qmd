@@ -1,0 +1,276 @@
+# Accessing & Manipulating an RSE
+
+## Creating an RSE from scratch
+
+Although in practice you will load an RSE produced by a pipeline (see @sec-workflow), it is instructive to build one manually.
+
+```r
+library(SummarizedExperiment)
+library(GenomicRanges)
+
+## ── 1. Assay matrices ───────────────────────────────────────────────────────
+counts <- matrix(
+  rpois(200, lambda = 500),   # 20 genes × 10 samples
+  nrow = 20, ncol = 10,
+  dimnames = list(
+    paste0("ENSG", 1:20),     # row names = gene IDs
+    paste0("S", 1:10)         # col names = sample IDs
+  )
+)
+
+normcounts <- log2(counts + 1)  # a second assay layer
+
+## ── 2. rowRanges (GRanges) ──────────────────────────────────────────────────
+gr <- GRanges(
+  seqnames = c(rep("chr1", 10), rep("chr2", 10)),
+  ranges   = IRanges(start = seq(1e4, 2e5, length.out = 20),
+                     width = 1000),
+  strand   = rep(c("+", "-"), 10),
+  gene_id  = paste0("ENSG", 1:20),   # mcols
+  symbol   = paste0("GENE", 1:20)    # mcols
+)
+names(gr) <- paste0("ENSG", 1:20)   # must match rownames(counts)
+
+## ── 3. colData ───────────────────────────────────────────────────────────────
+col_df <- DataFrame(
+  sample    = paste0("S", 1:10),
+  condition = rep(c("treated", "control"), each = 5),
+  batch     = rep(c("B1", "B2"), 5),
+  sex       = sample(c("M", "F"), 10, replace = TRUE)
+)
+rownames(col_df) <- paste0("S", 1:10)   # must match colnames(counts)
+
+## ── 4. Assemble ──────────────────────────────────────────────────────────────
+rse <- SummarizedExperiment(
+  assays    = list(counts = counts, normcounts = normcounts),
+  rowRanges = gr,
+  colData   = col_df,
+  metadata  = list(organism = "Homo sapiens", pipeline = "tutorial")
+)
+
+rse   # inspect
+```
+
+::: {.callout-tip}
+## Key: matching names
+
+`rownames(counts)` must equal `names(gr)`;  
+`colnames(counts)` must equal `rownames(col_df)`.  
+If they don't match, the constructor throws an error.
+:::
+
+---
+
+## Reading slots
+
+### Assays
+
+```r
+# All assay names
+assayNames(rse)
+# [1] "counts"     "normcounts"
+
+# Get the raw count matrix (returns a plain matrix)
+counts_mat <- assay(rse, "counts")
+counts_mat <- assay(rse, 1)         # same — by position
+
+# Get all assays as a SimpleList
+all_assays <- assays(rse)
+
+# Add a new assay
+assay(rse, "logCPM") <- edgeR::cpm(counts_mat, log = TRUE)
+```
+
+### rowRanges / rowData
+
+```r
+# Full GRanges
+rowRanges(rse)            # returns GRanges
+
+# Metadata columns of the GRanges (= rowData)
+rowData(rse)              # returns DataFrame
+rowData(rse)$symbol       # single column as a vector
+
+# Access via GRanges methods
+seqnames(rowRanges(rse))  # chromosome of every feature
+start(rowRanges(rse))     # start positions
+width(rowRanges(rse))     # feature widths in bp
+strand(rowRanges(rse))    # strand
+```
+
+### colData
+
+```r
+colData(rse)              # full DataFrame
+colData(rse)$condition    # one column
+
+# Shorthand with $ (very convenient!)
+rse$condition             # identical to colData(rse)$condition
+rse$batch
+
+# Add a new sample annotation
+rse$RIN <- c(9.1, 8.7, 9.3, 8.9, 9.0,
+             8.5, 9.2, 8.8, 9.1, 8.6)  # RNA integrity
+```
+
+### metadata
+
+```r
+metadata(rse)             # returns a named list
+metadata(rse)$organism    # one element
+metadata(rse)$QC <- list(minRIN = 8, minDepth = 1e6)
+```
+
+---
+
+## Subsetting
+
+Subsetting uses standard `[row, col]` syntax — just like a matrix.
+
+```r
+## By index
+rse[1:5, 1:3]
+
+## By name
+rse["ENSG3", "S2"]
+
+## By logical vector — keep treated samples only
+rse[, rse$condition == "treated"]
+
+## Keep only chr1 features
+rse[seqnames(rowRanges(rse)) == "chr1", ]
+
+## Combine both
+rse_sub <- rse[
+  seqnames(rowRanges(rse)) == "chr1",
+  rse$condition == "treated"
+]
+dim(rse_sub)
+```
+
+::: {.diagram-container}
+
+```{=html}
+<svg viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg"
+     style="max-width:100%;font-family:system-ui,sans-serif;">
+  <rect width="680" height="300" rx="10" fill="#f8f9fa"/>
+
+  <!-- BEFORE label -->
+  <text x="130" y="30" text-anchor="middle" font-size="14"
+        font-weight="bold" fill="#374151">Before [rows, cols]</text>
+
+  <!-- full matrix -->
+  <rect x="30" y="45" width="200" height="200" rx="6"
+        fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <!-- highlight columns 1-3 -->
+  <rect x="30" y="45" width="55" height="200" rx="0"
+        fill="#bfdbfe" opacity="0.6"/>
+  <!-- highlight rows 1-3 -->
+  <rect x="30" y="45" width="200" height="55" rx="0"
+        fill="#fef08a" opacity="0.6"/>
+  <!-- intersection -->
+  <rect x="30" y="45" width="55" height="55" rx="0"
+        fill="#86efac" opacity="0.8"/>
+  <text x="57" y="75" text-anchor="middle" font-size="10"
+        font-weight="bold" fill="#15803d">subset</text>
+  <text x="130" y="160" text-anchor="middle" font-size="12"
+        fill="#6b7280">m × n</text>
+  <!-- bracket labels -->
+  <text x="57" y="260" text-anchor="middle" font-size="10"
+        fill="#1e40af">cols 1-3</text>
+  <text x="10" y="75" text-anchor="middle" font-size="10"
+        fill="#92400e">rows 1-3</text>
+
+  <!-- ARROW -->
+  <text x="290" y="150" text-anchor="middle" font-size="26"
+        fill="#64748b">→</text>
+  <text x="290" y="170" text-anchor="middle" font-size="10"
+        fill="#64748b">rse[1:3, 1:3]</text>
+
+  <!-- AFTER label -->
+  <text x="530" y="30" text-anchor="middle" font-size="14"
+        font-weight="bold" fill="#374151">After (all slots synced)</text>
+
+  <!-- assay sub -->
+  <rect x="380" y="45" width="80" height="80" rx="6"
+        fill="#86efac" stroke="#16a34a" stroke-width="2"/>
+  <text x="420" y="90" text-anchor="middle" font-size="10"
+        fill="#15803d">assay</text>
+  <text x="420" y="106" text-anchor="middle" font-size="9"
+        fill="#15803d">3 × 3</text>
+
+  <!-- rowRanges sub -->
+  <rect x="380" y="145" width="80" height="50" rx="6"
+        fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="420" y="175" text-anchor="middle" font-size="10"
+        fill="#15803d">rowRanges</text>
+  <text x="420" y="188" text-anchor="middle" font-size="9"
+        fill="#15803d">3 ranges</text>
+
+  <!-- colData sub -->
+  <rect x="480" y="45" width="80" height="80" rx="6"
+        fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>
+  <text x="520" y="90" text-anchor="middle" font-size="10"
+        fill="#a16207">colData</text>
+  <text x="520" y="106" text-anchor="middle" font-size="9"
+        fill="#a16207">3 samples</text>
+
+  <!-- metadata unchanged -->
+  <rect x="580" y="45" width="80" height="55" rx="6"
+        fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="620" y="72" text-anchor="middle" font-size="9"
+        fill="#5b21b6">metadata</text>
+  <text x="620" y="86" text-anchor="middle" font-size="8"
+        fill="#5b21b6">unchanged</text>
+
+  <!-- sync label -->
+  <text x="520" y="220" text-anchor="middle" font-size="11"
+        fill="#374151">All slots automatically</text>
+  <text x="520" y="236" text-anchor="middle" font-size="11"
+        fill="#374151">subsetted in sync ✓</text>
+</svg>
+```
+
+**Figure 2.1** — Subsetting an RSE synchronises every slot simultaneously.
+:::
+
+---
+
+## Merging RSEs — `cbind` and `rbind`
+
+```r
+# Combine samples (same features, different samples)
+rse_combined <- cbind(rse_batch1, rse_batch2)
+
+# Combine features (same samples, different genomic regions)
+rse_all <- rbind(rse_chr1, rse_chr2)
+```
+
+::: {.callout-warning}
+For `cbind`, both objects must have identical `rowRanges` (same features).  
+For `rbind`, both objects must have identical `colData` (same samples).
+:::
+
+---
+
+## Useful utility functions
+
+```r
+# How many assays?
+length(assays(rse))
+
+# Feature names and dimensions
+rownames(rse); colnames(rse); dim(rse)
+
+# Quick summary of colData
+summary(as.data.frame(colData(rse)))
+
+# Which chromosomes are represented?
+table(seqnames(rowRanges(rse)))
+
+# Find features overlapping a region of interest
+library(GenomicRanges)
+query  <- GRanges("chr1", IRanges(1e4, 5e4))
+hits   <- findOverlaps(rowRanges(rse), query)
+rse_roi <- rse[queryHits(hits), ]
+```

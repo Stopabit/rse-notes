@@ -1,0 +1,242 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "NGS Data Structures in R",
+    "section": "",
+    "text": "Introduction\nThese notes accompany the NGS Data Analysis module.\nThey focus on the SummarizedExperiment family of R/Bioconductor objects — the standard container for virtually every modern high-throughput sequencing analysis pipeline.",
+    "crumbs": [
+      "Introduction"
+    ]
+  },
+  {
+    "objectID": "index.html#why-a-dedicated-container",
+    "href": "index.html#why-a-dedicated-container",
+    "title": "NGS Data Structures in R",
+    "section": "Why a dedicated container?",
+    "text": "Why a dedicated container?\nNGS experiments produce at least three interconnected tables that must always stay in sync:\n\n\n\n\n\n\n\n\n\nTable\nRows\nColumns\nContains\n\n\n\n\nCount / assay matrix\nGenes/features\nSamples\nRaw counts, TPM, FPKM…\n\n\nSample metadata\nSamples\nAttributes\nCondition, batch, sex…\n\n\nFeature metadata\nGenes/features\nAttributes\nGene name, chromosome, GC%…\n\n\n\nKeeping these three tables aligned by hand is error-prone.\nSummarizedExperiment binds them into one object and guarantees they never go out of sync.",
+    "crumbs": [
+      "Introduction"
+    ]
+  },
+  {
+    "objectID": "index.html#the-summarizedexperiment-family",
+    "href": "index.html#the-summarizedexperiment-family",
+    "title": "NGS Data Structures in R",
+    "section": "The SummarizedExperiment family",
+    "text": "The SummarizedExperiment family\nSummarizedExperiment (SE)\n└── RangedSummarizedExperiment (RSE)   ← what you saw in class\n    ├── DESeqDataSet         (DESeq2)\n    ├── SingleCellExperiment (scRNA-seq)\n    └── …and many more\nRangedSummarizedExperiment adds genomic coordinates (a GRanges object) to each row/feature, enabling range-based operations.",
+    "crumbs": [
+      "Introduction"
+    ]
+  },
+  {
+    "objectID": "index.html#package-installation",
+    "href": "index.html#package-installation",
+    "title": "NGS Data Structures in R",
+    "section": "Package installation",
+    "text": "Package installation\n# Install from Bioconductor\nif (!require(\"BiocManager\", quietly = TRUE))\n    install.packages(\"BiocManager\")\n\nBiocManager::install(\"SummarizedExperiment\")\n\n# Also very useful\nBiocManager::install(c(\"GenomicRanges\", \"DESeq2\", \"tximeta\"))",
+    "crumbs": [
+      "Introduction"
+    ]
+  },
+  {
+    "objectID": "index.html#how-to-use-these-notes",
+    "href": "index.html#how-to-use-these-notes",
+    "title": "NGS Data Structures in R",
+    "section": "How to use these notes",
+    "text": "How to use these notes\nEach chapter builds on the previous one:\n\nStructure — visual anatomy of an RSE object\nAccess & Manipulation — how to get data in and out\nWorkflow — from raw counts to a ready-to-analyse RSE\n\n\n\n\n\n\n\nTipTip — Run the code!\n\n\n\nEvery code block is self-contained and can be run in a fresh R session after installing SummarizedExperiment.",
+    "crumbs": [
+      "Introduction"
+    ]
+  },
+  {
+    "objectID": "structure.html",
+    "href": "structure.html",
+    "title": "1  Structure of a RangedSummarizedExperiment",
+    "section": "",
+    "text": "1.1 The big picture\nA RangedSummarizedExperiment (RSE) is best imagined as a rectangular container where rows are genomic features (genes, transcripts, peaks…) and columns are samples. Every slot is row-indexed or column-indexed, so subsetting one slot automatically subsets all others.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Structure of a RangedSummarizedExperiment</span>"
+    ]
+  },
+  {
+    "objectID": "structure.html#the-big-picture",
+    "href": "structure.html#the-big-picture",
+    "title": "1  Structure of a RangedSummarizedExperiment",
+    "section": "",
+    "text": "assay(s)\n  \n  S1\n  S2\n  S3\n  S4\n  \n  \n  \n  \n  \n  \n  \n  \n  \n  \n  \n  \n  1243\n  876\n  2104\n  543\n  88\n  91\n  77\n  102\n  … genes × samples …\n  \n  \n    n samples (columns)\n  \n  m features (rows)\n\n  \n  \n  rowRanges\n  GRanges / GRangesList\n  \n  \n  chr1:100-200 [+]\n  chr1:500-650 [+]\n  chr2:100-300 [-]\n  chr3:200-400 [+]\n  …\n  \n  \n\n  \n  \n  colData\n  DataFrame  (samples as rows)\n  Sample  Condition  Batch  Sex\n  S1      treated    B1     M\n  S2      control    B1     F …\n  \n  \n\n  \n  \n  rowData\n  DataFrame  (features as rows)\n  \n  gene_id   symbol  biotype\n  ENSG0001  BRCA1   protein_coding\n  ENSG0002  TP53    protein_coding\n  ENSG0003  MIR21   miRNA\n  …\n  \n  \n\n  \n  \n  metadata\n  named list — anything\n  $organism: \"Homo sapiens\"\n  $date: \"2025-01-15\"\n  $pipeline: \"STAR + featureCounts\"\n\n  \n  \n  RangedSummarizedExperiment\n\n  \n  \n    \n      \n    \n    \n      \n    \n    \n      \n    \n  \n\nFigure 1.1 — Anatomy of a RangedSummarizedExperiment.\nThe assay matrix is the centre; all other slots are indexed to its rows or columns.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Structure of a RangedSummarizedExperiment</span>"
+    ]
+  },
+  {
+    "objectID": "structure.html#the-five-core-slots",
+    "href": "structure.html#the-five-core-slots",
+    "title": "1  Structure of a RangedSummarizedExperiment",
+    "section": "1.2 The five core slots",
+    "text": "1.2 The five core slots\n\n\n\n\nSlot\n\n\nAccessor\n\n\nClass\n\n\nIndexed by\n\n\nHolds\n\n\n\n\n\n\nassays\n\n\nassay() / assays()\n\n\nSimpleList of matrices\n\n\nrows & cols\n\n\nCount matrices, normalized values, log-CPM…\n\n\n\n\nrowRanges\n\n\nrowRanges()\n\n\nGRanges / GRangesList\n\n\nrows\n\n\nGenomic coordinates of each feature\n\n\n\n\nrowData\n\n\nrowData()\n\n\nDataFrame\n\n\nrows\n\n\nGene symbol, biotype, GC content…\n\n\n\n\ncolData\n\n\ncolData()\n\n\nDataFrame\n\n\ncols\n\n\nSample ID, condition, batch, QC metrics…\n\n\n\n\nmetadata\n\n\nmetadata()\n\n\nlist\n\n\n—\n\n\nExperiment-level free text, parameters…\n\n\n\n\n\n\n\n\n\n\nNoterowData vs rowRanges — what’s the difference?\n\n\n\nIn a RangedSummarizedExperiment, rowRanges() always returns a GRanges object containing the genomic coordinates.\nrowData() returns the mcols() (metadata columns) of that same GRanges — i.e., the non-coordinate per-feature annotations.\nIn a plain SummarizedExperiment (no ranges), rowRanges() returns NULL and rowData() returns the full per-feature DataFrame.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Structure of a RangedSummarizedExperiment</span>"
+    ]
+  },
+  {
+    "objectID": "structure.html#se-vs-rse-the-inheritance-chain",
+    "href": "structure.html#se-vs-rse-the-inheritance-chain",
+    "title": "1  Structure of a RangedSummarizedExperiment",
+    "section": "1.3 SE vs RSE — the inheritance chain",
+    "text": "1.3 SE vs RSE — the inheritance chain\n\n\n  \n\n  \n  \n  RectangularData\n\n  \n  \n  SummarizedExperiment\n  assays · rowData · colData · metadata\n\n  \n  \n  RangedSummarizedExperiment\n  + rowRanges (GRanges/GRangesList)\n\n  \n  \n  \n\n  \n    \n      \n    \n  \n\nFigure 1.2 — Class inheritance. RSE extends SE by adding genomic coordinates.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Structure of a RangedSummarizedExperiment</span>"
+    ]
+  },
+  {
+    "objectID": "structure.html#dimensions-and-names",
+    "href": "structure.html#dimensions-and-names",
+    "title": "1  Structure of a RangedSummarizedExperiment",
+    "section": "1.4 Dimensions and names",
+    "text": "1.4 Dimensions and names\nAn RSE always has two dimensions accessible via dim():\ndim(rse)\n# [1] 20000   8      # 20 000 genes × 8 samples\n\nnrow(rse)   # number of features\nncol(rse)   # number of samples\n\nrownames(rse)  # feature identifiers (e.g. Ensembl IDs)\ncolnames(rse)  # sample names\n\n\n\n\n\n\nImportantThe golden rule of RSE — subsetting is synchronised\n\n\n\nrse_sub &lt;- rse[1:100, rse$condition == \"treated\"]\nThis simultaneously subsets:\n\nthe assay matrix(es) to rows 1–100 and treated columns\nrowRanges to features 1–100\ncolData to treated samples only\nrowData accordingly\n\nYou can never accidentally misalign rows and columns.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Structure of a RangedSummarizedExperiment</span>"
+    ]
+  },
+  {
+    "objectID": "structure.html#what-does-show-print",
+    "href": "structure.html#what-does-show-print",
+    "title": "1  Structure of a RangedSummarizedExperiment",
+    "section": "1.5 What does show() print?",
+    "text": "1.5 What does show() print?\nWhen you type an RSE object name in the console, R calls show() and you see something like:\nclass: RangedSummarizedExperiment \ndim: 20000 8 \nmetadata(1): ''\nassays(2): counts normcounts\nrownames(20000): ENSG00000000003 ENSG00000000005 ...\nrowData names(3): gene_id symbol biotype\ncolnames(8): S1 S2 S3 S4 S5 S6 S7 S8\ncolData names(4): Sample condition batch sex\nEach line directly corresponds to one slot in the diagram above.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Structure of a RangedSummarizedExperiment</span>"
+    ]
+  },
+  {
+    "objectID": "structure.html#the-granges-slot-in-depth",
+    "href": "structure.html#the-granges-slot-in-depth",
+    "title": "1  Structure of a RangedSummarizedExperiment",
+    "section": "1.6 The GRanges slot in depth",
+    "text": "1.6 The GRanges slot in depth\nrowRanges(rse) returns a GRanges object with one range per feature:\n\n\n  \n\n  \n  \n  seqnames\n  ranges\n  strand\n  gene_id (mcol)\n  symbol (mcol)\n\n  \n  \n  \n  \n  \n  \n\n  \n  chr1\n  100 000 – 120 000\n  +\n  ENSG00000000003\n  TSPAN6\n\n  chr1\n  135 000 – 138 000\n  -\n  ENSG00000000005\n  TNMD\n\n  chr1\n  200 000 – 215 000\n  +\n  ENSG00000000419\n  DPM1\n\n  chr2\n  45 000 – 59 000\n  -\n  ENSG00000000457\n  SCYL3\n\n  … 20 000 rows total …\n\n  \n  \n  ← these columns live in mcols(rowRanges(rse))\n\nFigure 1.3 — Structure of the GRanges object stored in rowRanges().\nThe seqnames, ranges, and strand columns are the core range fields;\nall additional columns (gene_id, symbol…) are metadata columns (mcols).",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Structure of a RangedSummarizedExperiment</span>"
+    ]
+  },
+  {
+    "objectID": "access.html",
+    "href": "access.html",
+    "title": "2  Accessing & Manipulating an RSE",
+    "section": "",
+    "text": "2.1 Creating an RSE from scratch\nAlthough in practice you will load an RSE produced by a pipeline (see Chapter 3), it is instructive to build one manually.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Accessing & Manipulating an RSE</span>"
+    ]
+  },
+  {
+    "objectID": "access.html#creating-an-rse-from-scratch",
+    "href": "access.html#creating-an-rse-from-scratch",
+    "title": "2  Accessing & Manipulating an RSE",
+    "section": "",
+    "text": "library(SummarizedExperiment)\nlibrary(GenomicRanges)\n\n## ── 1. Assay matrices ───────────────────────────────────────────────────────\ncounts &lt;- matrix(\n  rpois(200, lambda = 500),   # 20 genes × 10 samples\n  nrow = 20, ncol = 10,\n  dimnames = list(\n    paste0(\"ENSG\", 1:20),     # row names = gene IDs\n    paste0(\"S\", 1:10)         # col names = sample IDs\n  )\n)\n\nnormcounts &lt;- log2(counts + 1)  # a second assay layer\n\n## ── 2. rowRanges (GRanges) ──────────────────────────────────────────────────\ngr &lt;- GRanges(\n  seqnames = c(rep(\"chr1\", 10), rep(\"chr2\", 10)),\n  ranges   = IRanges(start = seq(1e4, 2e5, length.out = 20),\n                     width = 1000),\n  strand   = rep(c(\"+\", \"-\"), 10),\n  gene_id  = paste0(\"ENSG\", 1:20),   # mcols\n  symbol   = paste0(\"GENE\", 1:20)    # mcols\n)\nnames(gr) &lt;- paste0(\"ENSG\", 1:20)   # must match rownames(counts)\n\n## ── 3. colData ───────────────────────────────────────────────────────────────\ncol_df &lt;- DataFrame(\n  sample    = paste0(\"S\", 1:10),\n  condition = rep(c(\"treated\", \"control\"), each = 5),\n  batch     = rep(c(\"B1\", \"B2\"), 5),\n  sex       = sample(c(\"M\", \"F\"), 10, replace = TRUE)\n)\nrownames(col_df) &lt;- paste0(\"S\", 1:10)   # must match colnames(counts)\n\n## ── 4. Assemble ──────────────────────────────────────────────────────────────\nrse &lt;- SummarizedExperiment(\n  assays    = list(counts = counts, normcounts = normcounts),\n  rowRanges = gr,\n  colData   = col_df,\n  metadata  = list(organism = \"Homo sapiens\", pipeline = \"tutorial\")\n)\n\nrse   # inspect\n\n\n\n\n\n\nTipKey: matching names\n\n\n\nrownames(counts) must equal names(gr);\ncolnames(counts) must equal rownames(col_df).\nIf they don’t match, the constructor throws an error.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Accessing & Manipulating an RSE</span>"
+    ]
+  },
+  {
+    "objectID": "access.html#reading-slots",
+    "href": "access.html#reading-slots",
+    "title": "2  Accessing & Manipulating an RSE",
+    "section": "2.2 Reading slots",
+    "text": "2.2 Reading slots\n\n2.2.1 Assays\n# All assay names\nassayNames(rse)\n# [1] \"counts\"     \"normcounts\"\n\n# Get the raw count matrix (returns a plain matrix)\ncounts_mat &lt;- assay(rse, \"counts\")\ncounts_mat &lt;- assay(rse, 1)         # same — by position\n\n# Get all assays as a SimpleList\nall_assays &lt;- assays(rse)\n\n# Add a new assay\nassay(rse, \"logCPM\") &lt;- edgeR::cpm(counts_mat, log = TRUE)\n\n\n2.2.2 rowRanges / rowData\n# Full GRanges\nrowRanges(rse)            # returns GRanges\n\n# Metadata columns of the GRanges (= rowData)\nrowData(rse)              # returns DataFrame\nrowData(rse)$symbol       # single column as a vector\n\n# Access via GRanges methods\nseqnames(rowRanges(rse))  # chromosome of every feature\nstart(rowRanges(rse))     # start positions\nwidth(rowRanges(rse))     # feature widths in bp\nstrand(rowRanges(rse))    # strand\n\n\n2.2.3 colData\ncolData(rse)              # full DataFrame\ncolData(rse)$condition    # one column\n\n# Shorthand with $ (very convenient!)\nrse$condition             # identical to colData(rse)$condition\nrse$batch\n\n# Add a new sample annotation\nrse$RIN &lt;- c(9.1, 8.7, 9.3, 8.9, 9.0,\n             8.5, 9.2, 8.8, 9.1, 8.6)  # RNA integrity\n\n\n2.2.4 metadata\nmetadata(rse)             # returns a named list\nmetadata(rse)$organism    # one element\nmetadata(rse)$QC &lt;- list(minRIN = 8, minDepth = 1e6)",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Accessing & Manipulating an RSE</span>"
+    ]
+  },
+  {
+    "objectID": "access.html#subsetting",
+    "href": "access.html#subsetting",
+    "title": "2  Accessing & Manipulating an RSE",
+    "section": "2.3 Subsetting",
+    "text": "2.3 Subsetting\nSubsetting uses standard [row, col] syntax — just like a matrix.\n## By index\nrse[1:5, 1:3]\n\n## By name\nrse[\"ENSG3\", \"S2\"]\n\n## By logical vector — keep treated samples only\nrse[, rse$condition == \"treated\"]\n\n## Keep only chr1 features\nrse[seqnames(rowRanges(rse)) == \"chr1\", ]\n\n## Combine both\nrse_sub &lt;- rse[\n  seqnames(rowRanges(rse)) == \"chr1\",\n  rse$condition == \"treated\"\n]\ndim(rse_sub)\n\n\n  \n\n  \n  Before [rows, cols]\n\n  \n  \n  \n  \n  \n  \n  \n  \n  subset\n  m × n\n  \n  cols 1-3\n  rows 1-3\n\n  \n  →\n  rse[1:3, 1:3]\n\n  \n  After (all slots synced)\n\n  \n  \n  assay\n  3 × 3\n\n  \n  \n  rowRanges\n  3 ranges\n\n  \n  \n  colData\n  3 samples\n\n  \n  \n  metadata\n  unchanged\n\n  \n  All slots automatically\n  subsetted in sync ✓\n\nFigure 2.1 — Subsetting an RSE synchronises every slot simultaneously.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Accessing & Manipulating an RSE</span>"
+    ]
+  },
+  {
+    "objectID": "access.html#merging-rses-cbind-and-rbind",
+    "href": "access.html#merging-rses-cbind-and-rbind",
+    "title": "2  Accessing & Manipulating an RSE",
+    "section": "2.4 Merging RSEs — cbind and rbind",
+    "text": "2.4 Merging RSEs — cbind and rbind\n# Combine samples (same features, different samples)\nrse_combined &lt;- cbind(rse_batch1, rse_batch2)\n\n# Combine features (same samples, different genomic regions)\nrse_all &lt;- rbind(rse_chr1, rse_chr2)\n\n\n\n\n\n\nWarning\n\n\n\nFor cbind, both objects must have identical rowRanges (same features).\nFor rbind, both objects must have identical colData (same samples).",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Accessing & Manipulating an RSE</span>"
+    ]
+  },
+  {
+    "objectID": "access.html#useful-utility-functions",
+    "href": "access.html#useful-utility-functions",
+    "title": "2  Accessing & Manipulating an RSE",
+    "section": "2.5 Useful utility functions",
+    "text": "2.5 Useful utility functions\n# How many assays?\nlength(assays(rse))\n\n# Feature names and dimensions\nrownames(rse); colnames(rse); dim(rse)\n\n# Quick summary of colData\nsummary(as.data.frame(colData(rse)))\n\n# Which chromosomes are represented?\ntable(seqnames(rowRanges(rse)))\n\n# Find features overlapping a region of interest\nlibrary(GenomicRanges)\nquery  &lt;- GRanges(\"chr1\", IRanges(1e4, 5e4))\nhits   &lt;- findOverlaps(rowRanges(rse), query)\nrse_roi &lt;- rse[queryHits(hits), ]",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Accessing & Manipulating an RSE</span>"
+    ]
+  },
+  {
+    "objectID": "workflow.html",
+    "href": "workflow.html",
+    "title": "3  NGS Workflow & File Structure",
+    "section": "",
+    "text": "3.1 Where does an RSE come from in practice?\nIn a real RNA-seq experiment you never build an RSE by hand.\nInstead, a quantification tool produces count files that are then loaded into R using a dedicated importer.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>NGS Workflow & File Structure</span>"
+    ]
+  },
+  {
+    "objectID": "workflow.html#where-does-an-rse-come-from-in-practice",
+    "href": "workflow.html#where-does-an-rse-come-from-in-practice",
+    "title": "3  NGS Workflow & File Structure",
+    "section": "",
+    "text": "Raw FASTQ\n  per sample\n\n  \n  \n  FastQC / Trim\n\n  \n  \n  Alignment / Mapping\n  STAR · HISAT2 · Salmon\n\n  \n  \n  quantification\n\n  \n  \n  Count files\n  BAM · featureCounts.txt · quant.sf\n\n  \n  \n  \n  tximeta / tximport\n  (Salmon / kallisto)\n\n  \n  \n  read.table / DESeqDataSetFromMatrix\n  (STAR + featureCounts)\n\n  \n  \n  RangedSummarizedExperiment\n  counts + rowRanges + colData\n\n  \n  \n\n  \n  \n  DESeq2\n  differential expression\n\n  \n  edgeR / limma\n  differential expression\n\n  \n  SingleCellExperiment\n  scRNA-seq analysis\n\n  \n  GenomicAlignments\n  range operations\n\n  \n  \n  \n  \n  \n  \n\n  \n    \n      \n    \n    \n      \n    \n    \n      \n    \n  \n\nFigure 3.1 — Typical RNA-seq workflow. The RSE is the central hand-off object between upstream quantification and downstream statistical analysis.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>NGS Workflow & File Structure</span>"
+    ]
+  },
+  {
+    "objectID": "workflow.html#typical-project-file-structure",
+    "href": "workflow.html#typical-project-file-structure",
+    "title": "3  NGS Workflow & File Structure",
+    "section": "3.2 Typical project file structure",
+    "text": "3.2 Typical project file structure\nA well-organised NGS project following Bioconductor conventions looks like this:\nmy_rnaseq_project/\n│\n├── data/\n│   ├── raw/\n│   │   ├── sample1_R1.fastq.gz\n│   │   ├── sample1_R2.fastq.gz\n│   │   └── ...\n│   │\n│   ├── counts/                        ← featureCounts / HTSeq output\n│   │   ├── featureCounts_output.txt\n│   │   └── featureCounts_output.txt.summary\n│   │\n│   ├── salmon/                        ← Salmon quantification output\n│   │   ├── sample1/\n│   │   │   ├── quant.sf               ← transcript-level counts\n│   │   │   └── aux_info/\n│   │   └── sample2/\n│   │       └── quant.sf\n│   │\n│   ├── metadata/\n│   │   └── sample_sheet.csv           ← colData source\n│   │\n│   └── rse/\n│       └── rse_all_samples.rds        ← saved RSE object\n│\n├── analysis/\n│   ├── 01_build_rse.R                 ← create & save RSE\n│   ├── 02_qc.R                        ← quality control\n│   ├── 03_DE.R                        ← differential expression\n│   └── 04_visualisation.R\n│\n├── results/\n│   ├── DE_tables/\n│   └── plots/\n│\n└── my_rnaseq_project.Rproj",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>NGS Workflow & File Structure</span>"
+    ]
+  },
+  {
+    "objectID": "workflow.html#loading-rses-from-common-sources",
+    "href": "workflow.html#loading-rses-from-common-sources",
+    "title": "3  NGS Workflow & File Structure",
+    "section": "3.3 Loading RSEs from common sources",
+    "text": "3.3 Loading RSEs from common sources\n\n3.3.1 From Salmon output via tximeta (recommended for RNA-seq)\ntximeta is the gold-standard loader: it automatically attaches transcript/gene annotations and populates rowRanges.\nlibrary(tximeta)\n\n# Build a sample sheet (one row per sample)\ncoldata &lt;- data.frame(\n  names  = c(\"S1\", \"S2\", \"S3\", \"S4\"),\n  files  = file.path(\"data/salmon\",\n                     c(\"S1\",\"S2\",\"S3\",\"S4\"),\n                     \"quant.sf\"),\n  condition = c(\"treated\",\"treated\",\"control\",\"control\"),\n  stringsAsFactors = FALSE\n)\n\n# Import — automatically downloads annotation & creates RSE\nrse &lt;- tximeta(coldata)\n\n# Summarise to gene level (from transcript level)\nrse_gene &lt;- summarizeToGene(rse)\n\n\n3.3.2 From featureCounts / HTSeq via base R\nlibrary(SummarizedExperiment)\nlibrary(GenomicRanges)\n\n# 1. Read the count matrix\nfc &lt;- read.table(\"data/counts/featureCounts_output.txt\",\n                 header = TRUE, skip = 1, row.names = 1)\n\n# 2. Separate annotation columns from count columns\nannot_cols  &lt;- 1:5   # Chr, Start, End, Strand, Length\ncount_cols  &lt;- 6:ncol(fc)\n\ncounts &lt;- as.matrix(fc[, count_cols])\ncolnames(counts) &lt;- gsub(\".*Aligned\\\\.sortedByCoord.*\", \"\",\n                         colnames(counts))   # clean names\n\n# 3. Build GRanges from the annotation columns\ngr &lt;- GRanges(\n  seqnames = fc$Chr,\n  ranges   = IRanges(fc$Start, fc$End),\n  strand   = fc$Strand,\n  gene_id  = rownames(fc),\n  length   = fc$Length\n)\nnames(gr) &lt;- rownames(fc)\n\n# 4. Read sample sheet → colData\ncol_df &lt;- read.csv(\"data/metadata/sample_sheet.csv\",\n                   row.names = 1)\n\n# 5. Assemble RSE\nrse &lt;- SummarizedExperiment(\n  assays    = list(counts = counts),\n  rowRanges = gr,\n  colData   = col_df\n)\n\n# 6. Save for reuse\nsaveRDS(rse, \"data/rse/rse_all_samples.rds\")\n\n\n3.3.3 Loading a saved RSE\nrse &lt;- readRDS(\"data/rse/rse_all_samples.rds\")",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>NGS Workflow & File Structure</span>"
+    ]
+  },
+  {
+    "objectID": "workflow.html#handing-off-to-deseq2",
+    "href": "workflow.html#handing-off-to-deseq2",
+    "title": "3  NGS Workflow & File Structure",
+    "section": "3.4 Handing off to DESeq2",
+    "text": "3.4 Handing off to DESeq2\nOnce you have an RSE with a counts assay, passing it to DESeq2 is one line:\nlibrary(DESeq2)\n\ndds &lt;- DESeqDataSet(rse, design = ~ batch + condition)\n\n# DESeqDataSet is itself a subclass of RSE,\n# so all RSE accessor functions still work:\ndim(dds)\ncolData(dds)\nrowRanges(dds)\n\n\n  \n\n  \n  RSE\n  counts + rowRanges + colData\n  class: RangedSummarizedExperiment\n\n  \n  \n  DESeqDataSet(rse,\n  design = ~ condition)\n\n  \n  DESeqDataSet\n  extends RSE\n  + dispersion estimates\n  class: DESeqDataSet\n\n  \n    \n      \n    \n  \n\nFigure 3.2 — A DESeqDataSet is a subclass of RSE; the transition is seamless.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>NGS Workflow & File Structure</span>"
+    ]
+  },
+  {
+    "objectID": "workflow.html#quick-cheat-sheet",
+    "href": "workflow.html#quick-cheat-sheet",
+    "title": "3  NGS Workflow & File Structure",
+    "section": "3.5 Quick cheat-sheet",
+    "text": "3.5 Quick cheat-sheet\n## ── Inspect ────────────────────────────────────────────────────────────────\nrse                          # print summary\ndim(rse)                     # [features, samples]\ndimnames(rse)                # list of rownames & colnames\n\n## ── Assays ─────────────────────────────────────────────────────────────────\nassayNames(rse)              # names of stored matrices\nassay(rse)                   # first assay (usually \"counts\")\nassay(rse, \"normcounts\")     # specific assay by name\n\n## ── Features (rows) ────────────────────────────────────────────────────────\nrowRanges(rse)               # GRanges with coordinates\nrowData(rse)                 # DataFrame with feature annotations\nrownames(rse)                # character vector of IDs\nnrow(rse)\n\n## ── Samples (columns) ──────────────────────────────────────────────────────\ncolData(rse)                 # DataFrame with sample metadata\nrse$condition                # shorthand column access\ncolnames(rse)\nncol(rse)\n\n## ── Experiment metadata ────────────────────────────────────────────────────\nmetadata(rse)\n\n## ── Subsetting ─────────────────────────────────────────────────────────────\nrse[genes, samples]          # indices, names, or logical\nrse[, rse$condition == \"treated\"]\nrse[\"ENSG00000000003\", ]\n\n## ── Combine ────────────────────────────────────────────────────────────────\ncbind(rse1, rse2)            # add samples (same features)\nrbind(rse1, rse2)            # add features (same samples)\n\n## ── Save / load ────────────────────────────────────────────────────────────\nsaveRDS(rse, \"rse.rds\")\nrse &lt;- readRDS(\"rse.rds\")",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>NGS Workflow & File Structure</span>"
+    ]
+  }
+]

@@ -1,0 +1,45 @@
+/* ── Custom styles for NGS Notes ── */
+
+/* Callout box colours */
+.callout-tip    { border-left-color: #2ecc71; }
+.callout-note   { border-left-color: #3498db; }
+.callout-warning{ border-left-color: #e67e22; }
+.callout-important { border-left-color: #e74c3c; }
+
+/* Slot / component tables */
+.slot-table th {
+  background-color: #2c3e50;
+  color: white;
+}
+.slot-table tr:hover { background-color: #ecf0f1; }
+
+/* Diagram containers */
+.diagram-container {
+  background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+/* Inline code badges */
+code {
+  background-color: #eaf2ff;
+  color: #1a5276;
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+/* Chapter headers */
+h1.title { color: #1a5276; }
+h2 { border-bottom: 2px solid #3498db; padding-bottom: 4px; }
+
+/* Key-concept highlight */
+.key-concept {
+  background: linear-gradient(135deg, #667eea22, #764ba222);
+  border-left: 4px solid #667eea;
+  padding: 0.8rem 1rem;
+  border-radius: 0 6px 6px 0;
+  margin: 1rem 0;
+}

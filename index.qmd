@@ -1,0 +1,55 @@
+# Introduction {.unnumbered}
+
+These notes accompany the NGS Data Analysis module.  
+They focus on the **`SummarizedExperiment`** family of R/Bioconductor objects — the standard container for virtually every modern high-throughput sequencing analysis pipeline.
+
+## Why a dedicated container?
+
+NGS experiments produce at least **three interconnected tables** that must always stay in sync:
+
+| Table | Rows | Columns | Contains |
+|-------|------|---------|----------|
+| Count / assay matrix | Genes/features | Samples | Raw counts, TPM, FPKM… |
+| Sample metadata | Samples | Attributes | Condition, batch, sex… |
+| Feature metadata | Genes/features | Attributes | Gene name, chromosome, GC%… |
+
+Keeping these three tables aligned by hand is error-prone.  
+`SummarizedExperiment` **binds** them into one object and guarantees they never go out of sync.
+
+## The SummarizedExperiment family
+
+```
+SummarizedExperiment (SE)
+└── RangedSummarizedExperiment (RSE)   ← what you saw in class
+    ├── DESeqDataSet         (DESeq2)
+    ├── SingleCellExperiment (scRNA-seq)
+    └── …and many more
+```
+
+`RangedSummarizedExperiment` **adds genomic coordinates** (a `GRanges` object) to each row/feature, enabling range-based operations.
+
+## Package installation
+
+```r
+# Install from Bioconductor
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("SummarizedExperiment")
+
+# Also very useful
+BiocManager::install(c("GenomicRanges", "DESeq2", "tximeta"))
+```
+
+## How to use these notes
+
+Each chapter builds on the previous one:
+
+1. **Structure** — visual anatomy of an RSE object
+2. **Access & Manipulation** — how to get data in and out
+3. **Workflow** — from raw counts to a ready-to-analyse RSE
+
+::: {.callout-tip}
+## Tip — Run the code!
+Every code block is self-contained and can be run in a fresh R session after installing `SummarizedExperiment`.
+:::

@@ -1,0 +1,31 @@
+project:
+  type: book
+  output-dir: docs
+
+book:
+  title: "NGS Data Structures in R"
+  subtitle: "A Visual Guide to SummarizedExperiment & Friends"
+  author: "NGS Analysis Course Notes"
+  date: today
+  chapters:
+    - index.qmd
+    - structure.qmd
+    - access.qmd
+    - workflow.qmd
+
+bibliography: references.bib
+
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    code-link: true
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    highlight-style: github
+    fig-align: center
+    code-fold: false
+    smooth-scroll: true
+    css: custom.css
