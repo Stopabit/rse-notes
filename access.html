@@ -385,6 +385,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
+<p>This chapter covers the practical mechanics of working with an RSE: how to get data in and out of every slot, how to filter rows and columns, and how to combine multiple objects.</p>
+<p>The key principle is that <strong>every accessor works as both a getter and a setter</strong>. Calling <code>colData(rse)</code> returns the sample metadata; calling <code>colData(rse) &lt;- new_df</code> replaces it (with automatic dimension checking to prevent misalignment). The same pattern applies to every slot.</p>
 <section id="creating-an-rse-from-scratch" class="level2" data-number="2.1">
 <h2 data-number="2.1" class="anchored" data-anchor-id="creating-an-rse-from-scratch"><span class="header-section-number">2.1</span> Creating an RSE from scratch</h2>
 <p>Although in practice you will load an RSE produced by a pipeline (see <a href="workflow.html" class="quarto-xref"><span>Chapter 3</span></a>), it is instructive to build one manually.</p>
@@ -451,6 +453,7 @@ If they don’t match, the constructor throws an error.</p>
 </section>
 <section id="reading-slots" class="level2" data-number="2.2">
 <h2 data-number="2.2" class="anchored" data-anchor-id="reading-slots"><span class="header-section-number">2.2</span> Reading slots</h2>
+<p>Each slot has a dedicated accessor function. The <strong>plural form</strong> (e.g.&nbsp;<code>assays()</code>) returns the full container (a <code>SimpleList</code> or <code>DataFrame</code>), while the <strong>singular form</strong> (e.g.&nbsp;<code>assay()</code>) returns a single layer by name or index.</p>
 <section id="assays" class="level3" data-number="2.2.1">
 <h3 data-number="2.2.1" class="anchored" data-anchor-id="assays"><span class="header-section-number">2.2.1</span> Assays</h3>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># All assay names</span></span>
@@ -484,6 +487,7 @@ If they don’t match, the constructor throws an error.</p>
 </section>
 <section id="coldata" class="level3" data-number="2.2.3">
 <h3 data-number="2.2.3" class="anchored" data-anchor-id="coldata"><span class="header-section-number">2.2.3</span> colData</h3>
+<p>The <code>colData</code> slot is the most-used slot in practice — it holds condition, batch, and all other sample-level variables you will reference in your statistical design.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">colData</span>(rse)              <span class="co"># full DataFrame</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colData</span>(rse)<span class="sc">$</span>condition    <span class="co"># one column</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -494,6 +498,19 @@ If they don’t match, the constructor throws an error.</p>
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a new sample annotation</span></span>
 <span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>rse<span class="sc">$</span>RIN <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">9.1</span>, <span class="fl">8.7</span>, <span class="fl">9.3</span>, <span class="fl">8.9</span>, <span class="fl">9.0</span>,</span>
 <span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>             <span class="fl">8.5</span>, <span class="fl">9.2</span>, <span class="fl">8.8</span>, <span class="fl">9.1</span>, <span class="fl">8.6</span>)  <span class="co"># RNA integrity</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>The <code>$</code> shorthand
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>rse$condition</code> is shorthand for <code>colData(rse)$condition</code>. It works for reading <em>and</em> writing (<code>rse$RIN &lt;- ...</code>). In practice, almost all filtering is written as <code>rse[, rse$condition == "treated"]</code> because it is far more readable than the long-form equivalent.</p>
+</div>
+</div>
 </section>
 <section id="metadata" class="level3" data-number="2.2.4">
 <h3 data-number="2.2.4" class="anchored" data-anchor-id="metadata"><span class="header-section-number">2.2.4</span> metadata</h3>
@@ -505,7 +522,8 @@ If they don’t match, the constructor throws an error.</p>
 </section>
 <section id="subsetting" class="level2" data-number="2.3">
 <h2 data-number="2.3" class="anchored" data-anchor-id="subsetting"><span class="header-section-number">2.3</span> Subsetting</h2>
-<p>Subsetting uses standard <code>[row, col]</code> syntax — just like a matrix.</p>
+<p>Subsetting uses standard <code>[row, col]</code> syntax — just like a matrix. The critical difference from plain matrix subsetting is that <strong>all slots are subsetted together</strong>: the assay matrices, <code>rowRanges</code>, <code>rowData</code>, and <code>colData</code> all shrink in lock-step. You cannot accidentally produce a mismatched object.</p>
+<p>You can subset by integer index, character name, or a logical vector — whichever is most convenient:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="do">## By index</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>rse[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>]</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
