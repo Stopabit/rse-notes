@@ -4,8 +4,7 @@ project:
 
 book:
   title: "NGS Data Structures in R"
-  subtitle: "A Visual Guide to SummarizedExperiment & Friends"
-  author: "NGS Analysis Course Notes"
+  author: "Arseniy / Claude"
   date: today
   chapters:
     - index.qmd
